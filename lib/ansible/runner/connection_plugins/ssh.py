@@ -33,6 +33,9 @@ from ansible.callbacks import vvv
 from ansible import errors
 from ansible import utils
 
+DEFAULT_SSH_REMOTE_PORT = 22
+
+
 class Connection(object):
     ''' ssh based connections '''
 
@@ -78,7 +81,7 @@ class Connection(object):
         if not C.HOST_KEY_CHECKING:
             self.common_args += ["-o", "StrictHostKeyChecking=no"]
 
-        if self.port is not None:
+        if self.port != DEFAULT_SSH_REMOTE_PORT:
             self.common_args += ["-o", "Port=%d" % (self.port)]
         if self.private_key_file is not None:
             self.common_args += ["-o", "IdentityFile="+os.path.expanduser(self.private_key_file)]
@@ -173,11 +176,11 @@ class Connection(object):
         not_in_host_file = self.not_in_host_file(self.host)
 
         if C.HOST_KEY_CHECKING and not_in_host_file:
-            # lock around the initial SSH connectivity so the user prompt about whether to add 
+            # lock around the initial SSH connectivity so the user prompt about whether to add
             # the host to known hosts is not intermingled with multiprocess output.
             fcntl.lockf(self.runner.process_lockfile, fcntl.LOCK_EX)
             fcntl.lockf(self.runner.output_lockfile, fcntl.LOCK_EX)
-        
+
 
 
         try:
@@ -225,7 +228,7 @@ class Connection(object):
                 incorrect_password = gettext.dgettext(
                     "sudo", "Sorry, try again.")
                 if stdout.endswith("%s\r\n%s" % (incorrect_password, prompt)):
-                    raise errors.AnsibleError('Incorrect sudo password') 
+                    raise errors.AnsibleError('Incorrect sudo password')
 
             if p.stdout in rfd:
                 dat = os.read(p.stdout.fileno(), 9000)
@@ -241,9 +244,9 @@ class Connection(object):
                 p.wait()
                 break
         stdin.close() # close stdin after we read from stdout (see also issue #848)
-        
+
         if C.HOST_KEY_CHECKING and not_in_host_file:
-            # lock around the initial SSH connectivity so the user prompt about whether to add 
+            # lock around the initial SSH connectivity so the user prompt about whether to add
             # the host to known hosts is not intermingled with multiprocess output.
             fcntl.lockf(self.runner.output_lockfile, fcntl.LOCK_UN)
             fcntl.lockf(self.runner.process_lockfile, fcntl.LOCK_UN)
